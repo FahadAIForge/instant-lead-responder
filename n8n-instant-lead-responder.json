@@ -1,0 +1,700 @@
+{
+  "name": "Instant Lead Responder",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "284cb003-1b66-40b1-ba26-8fe9851ae67e",
+      "name": "Lead Webhook",
+      "position": [
+        0,
+        288
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "854a10a2-d81f-4d21-af17-774424ea417a",
+      "notes": "POST a lead here: { name, email, service, message }. Example curl is in the README."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s-name",
+              "name": "name",
+              "type": "string",
+              "value": "={{ $json.body.name }}"
+            },
+            {
+              "id": "s-email",
+              "name": "email",
+              "type": "string",
+              "value": "={{ $json.body.email }}"
+            },
+            {
+              "id": "s-service",
+              "name": "service",
+              "type": "string",
+              "value": "={{ $json.body.service }}"
+            },
+            {
+              "id": "s-message",
+              "name": "message",
+              "type": "string",
+              "value": "={{ $json.body.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2eb8ec3c-88ac-4d1a-a324-549339edd69c",
+      "name": "Normalize Lead",
+      "position": [
+        224,
+        288
+      ],
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.requestBody }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "6418abe9-7b93-4106-bb83-9efee1ffeceb",
+      "name": "AI Qualify Lead",
+      "position": [
+        672,
+        288
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KPI4LVvOZweYSqq5",
+          "name": "Header Auth account 2"
+        }
+      },
+      "notes": "Create a Header Auth credential: Name = Authorization, Value = Bearer YOUR_OPENAI_API_KEY."
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $('Normalize Lead').first().json;\nconst content = $json.choices[0].message.content;\nconst ai = JSON.parse(content);\nreturn [{ json: {\n  name: lead.name,\n  email: lead.email,\n  service: lead.service,\n  message: lead.message,\n  score: ai.score,\n  category: ai.category,\n  reason: ai.reason,\n  reply: ai.reply\n} }];"
+      },
+      "id": "456be3da-b734-4fe0-8564-41e94a193011",
+      "name": "Parse AI Result",
+      "position": [
+        896,
+        288
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cond-hot",
+              "leftValue": "={{ $json.score }}",
+              "operator": {
+                "operation": "gte",
+                "type": "number"
+              },
+              "rightValue": 70
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "bd6034fc-804f-42ac-9ae4-99546902db23",
+      "name": "Is Hot Lead?",
+      "position": [
+        1104,
+        288
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s-status-hot",
+              "name": "status",
+              "type": "string",
+              "value": "Hot — replied"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "d9b2bba6-86d1-46ad-a73d-466991ddef58",
+      "name": "Mark HOT",
+      "position": [
+        1328,
+        160
+      ],
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Re: Your {{ $json.service }} inquiry — quick reply",
+        "emailType": "text",
+        "message": "={{ $json.reply }}\n\n— Fahad Khan, AI Automation Specialist",
+        "options": {}
+      },
+      "id": "5d0eba9e-6f66-4191-96b6-4ae866cc4917",
+      "name": "Reply to Hot Lead",
+      "position": [
+        1552,
+        160
+      ],
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "webhookId": "6c93126a-cbb9-45b5-b912-72168ef80ae9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "vmacHf6SlV1DgPPA",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1NjX0-i89jqXxDCGHsapxdHYoPFTEBMWvcXrl17wMKok",
+          "mode": "list",
+          "cachedResultName": "Instant Lead Responder - Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NjX0-i89jqXxDCGHsapxdHYoPFTEBMWvcXrl17wMKok/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NjX0-i89jqXxDCGHsapxdHYoPFTEBMWvcXrl17wMKok/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Category": "={{ $('Mark HOT').item.json.category }}",
+            "Email": "={{ $('Mark HOT').item.json.email }}",
+            "Message": "={{ $('Mark HOT').item.json.message }}",
+            "Name": "={{ $('Mark HOT').item.json.name }}",
+            "Score": "={{ $('Mark HOT').item.json.score }}",
+            "Service": "={{ $('Mark HOT').item.json.service }}",
+            "Status": "={{ $('Mark HOT').item.json.status }}",
+            "Timestamp": "={{ $now }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Timestamp",
+              "id": "Timestamp",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Name",
+              "id": "Name",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Email",
+              "id": "Email",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Service",
+              "id": "Service",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Message",
+              "id": "Message",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Score",
+              "id": "Score",
+              "required": false,
+              "type": "number"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Category",
+              "id": "Category",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Status",
+              "id": "Status",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "convertFields": false
+        },
+        "options": {}
+      },
+      "id": "ba0e5b2b-3a75-4a98-95bc-a0ebad7508e2",
+      "name": "Log Hot Lead",
+      "position": [
+        1776,
+        160
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "KcthJWtjDux4gYXI",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s-status-ack",
+              "name": "status",
+              "type": "string",
+              "value": "Acknowledged"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "9a9e015f-3375-4337-b499-70f59296da20",
+      "name": "Mark Acknowledged",
+      "position": [
+        1328,
+        432
+      ],
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Thanks for reaching out about {{ $json.service }}",
+        "emailType": "text",
+        "message": "=Hi {{ $json.name }},\n\nThanks for reaching out about {{ $json.service }}. We've received your message and will get back to you shortly.\n\n— Fahad Khan, AI Automation Specialist",
+        "options": {}
+      },
+      "id": "cb617a05-31fe-4177-870a-5c63115b1525",
+      "name": "Acknowledge Lead",
+      "position": [
+        1552,
+        432
+      ],
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "webhookId": "458db2ce-f495-4f48-8512-424283e878f2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "vmacHf6SlV1DgPPA",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1NjX0-i89jqXxDCGHsapxdHYoPFTEBMWvcXrl17wMKok",
+          "mode": "list",
+          "cachedResultName": "Instant Lead Responder - Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NjX0-i89jqXxDCGHsapxdHYoPFTEBMWvcXrl17wMKok/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NjX0-i89jqXxDCGHsapxdHYoPFTEBMWvcXrl17wMKok/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Category": "={{ $('Mark Acknowledged').item.json.category }}",
+            "Email": "={{ $('Mark Acknowledged').item.json.email }}",
+            "Message": "={{ $('Mark Acknowledged').item.json.message }}",
+            "Name": "={{ $('Mark Acknowledged').item.json.name }}",
+            "Score": "={{ $('Mark Acknowledged').item.json.score }}",
+            "Service": "={{ $('Mark Acknowledged').item.json.service }}",
+            "Status": "={{ $('Mark Acknowledged').item.json.status }}",
+            "Timestamp": "={{ $now }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Timestamp",
+              "id": "Timestamp",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Name",
+              "id": "Name",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Email",
+              "id": "Email",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Service",
+              "id": "Service",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Message",
+              "id": "Message",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Score",
+              "id": "Score",
+              "required": false,
+              "type": "number"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Category",
+              "id": "Category",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Status",
+              "id": "Status",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "convertFields": false
+        },
+        "options": {}
+      },
+      "id": "1385da15-4411-4f39-bc6e-14959b87f378",
+      "name": "Log Other Lead",
+      "position": [
+        1776,
+        432
+      ],
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "KcthJWtjDux4gYXI",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"received\": true}",
+        "options": {}
+      },
+      "id": "9fe66866-6656-4432-8f56-1ad0870f2113",
+      "name": "Confirm Receipt",
+      "position": [
+        1984,
+        288
+      ],
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "content": "## Instant Lead Responder\nWebhook → AI qualifies the lead (score + category + draft reply) → Hot leads (70+) get an instant personalised reply, everyone else gets an acknowledgement → every lead is logged in Google Sheets.\n\nSETUP: 1) Import this JSON into n8n. 2) Header Auth credential for OpenAI: Authorization = Bearer YOUR_KEY. 3) Connect Gmail + Google Sheets, replace YOUR_GOOGLE_SHEET_ID, sheet tab must be named 'Leads' with headers: Timestamp, Name, Email, Service, Message, Score, Category, Status. 4) Activate, then test with the curl in the README.",
+        "height": 260,
+        "width": 420,
+        "color": 4
+      },
+      "id": "2f0caefc-877a-4599-b57c-64c66467de1a",
+      "name": "README Note",
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $json;\nconst system = `You are a lead qualification assistant for an AI automation agency run by Fahad Khan (services: AI agents & chatbots, n8n workflow automation, Python development). Score the lead 0-100 on buying intent and fit. Category: hot (70+), warm (40-69), cold (below 40). Draft a short, friendly, professional reply (max 80 words) that acknowledges their exact need, states one relevant benefit, and says a human will confirm a call shortly. Never invent prices, timelines, or guarantees. SCORING RUBRIC — judge the lead's actual words, not the message format. The Name, Email, Service and Message fields are real data, not placeholders: 80-100 (hot): a specific need matching our services PLUS urgency, a budget, or a timeline (for example: 'want to start this week', 'budget is 100000 PKR', 'call me today/tomorrow'). A clear buying signal such as a stated budget or a start date is enough for 75+ on its own. 40-69 (warm): a specific need but no urgency, budget, or timeline. 0-39 (cold): vague interest, only asking for information, no specific need, or not a fit. EXAMPLE: 'I need an AI chatbot for Instagram DMs that books appointments, want to start this week, budget 100000 PKR, call me today' is HOT — score 85-95. Never score such a lead below 70. Return ONLY valid JSON: { \"score\": number, \"category\": \"hot|warm|cold\", \"reason\": string, \"reply\": string }.`;\nconst user = 'Name: ' + lead.name + '\\nEmail: ' + lead.email + '\\nService interested in: ' + lead.service + '\\nMessage: ' + lead.message;\nconst body = {\n  model: 'qwen/qwen3.8-27b',\n  temperature: 0.3,\n  max_tokens: 400,\n  response_format: { type: 'json_object' },\n  messages: [\n    { role: 'system', content: system },\n    { role: 'user', content: user }\n  ]\n};\nreturn [{ json: { requestBody: JSON.stringify(body) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        288
+      ],
+      "id": "93eaa543-053f-4af1-95ce-26c59e1ab185",
+      "name": "Build AI Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Qualify Lead": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acknowledge Lead": {
+      "main": [
+        [
+          {
+            "node": "Log Other Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Hot Lead?": {
+      "main": [
+        [
+          {
+            "node": "Mark HOT",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark Acknowledged",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Hot Lead": {
+      "main": [
+        [
+          {
+            "node": "Confirm Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Other Lead": {
+      "main": [
+        [
+          {
+            "node": "Confirm Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Acknowledged": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark HOT": {
+      "main": [
+        [
+          {
+            "node": "Reply to Hot Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Lead": {
+      "main": [
+        [
+          {
+            "node": "Build AI Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Result": {
+      "main": [
+        [
+          {
+            "node": "Is Hot Lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to Hot Lead": {
+      "main": [
+        [
+          {
+            "node": "Log Hot Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build AI Request": {
+      "main": [
+        [
+          {
+            "node": "AI Qualify Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "16d3eb33-d161-4469-a966-9698a781dd25",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "98412d010d96c6098e8b8a505ba760cd6eb5559e2cc3ada1176d41dd88cace38"
+  },
+  "nodeGroups": [],
+  "id": "Jltmopz1xMhWdoyf",
+  "tags": []
+}

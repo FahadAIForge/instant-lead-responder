@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" href="data:," />
+    <title>Instant Lead Responder — Live Demo</title>
+    <meta name="description" content="A live n8n + AI automation: submit a lead and an AI agent qualifies it and replies by email in seconds." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Instant Lead Responder — Live Demo" />
+    <meta property="og:description" content="A live n8n + AI automation: submit a lead and an AI agent qualifies it and replies by email in seconds." />
+    <meta property="og:image" content="showcase.jpg" />
+    <meta property="og:image:width" content="2144" />
+    <meta property="og:image:height" content="1120" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Instant Lead Responder — Live Demo" />
+    <meta name="twitter:description" content="A live n8n + AI automation: submit a lead and an AI agent qualifies it and replies by email in seconds." />
+    <meta name="twitter:image" content="showcase.jpg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Archivo+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --paper: #ffffff;
+        --ink: #0e1510;
+        --ink-soft: #3d4740;
+        --green: #0a7d34;
+        --green-deep: #065c26;
+        --green-bright: #12a150;
+        --green-tint: #e9f6ee;
+        --green-tint-2: #f4faf6;
+        --line: #d9e4dc;
+        --line-strong: #0e1510;
+        --error: #b3261e;
+        --radius: 14px;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+        font-size: 17px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      ::selection { background: var(--green); color: #fff; }
+
+      .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+      /* ---------- top bar ---------- */
+      .topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 16px; padding: 20px 0 0;
+      }
+      .brand { font-weight: 900; letter-spacing: -0.02em; font-size: 19px; }
+      .brand span { color: var(--green); }
+      .live-pill {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-family: "Archivo Mono", ui-monospace, monospace;
+        font-size: 12px; font-weight: 600; letter-spacing: 0.08em;
+        color: var(--green-deep);
+        border: 1.5px solid var(--green);
+        background: var(--green-tint);
+        padding: 6px 12px; border-radius: 999px;
+        white-space: nowrap;
+      }
+      .live-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: var(--green-bright);
+        animation: pulse 1.8s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(18,161,80,.45); }
+        50% { box-shadow: 0 0 0 6px rgba(18,161,80,0); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .live-dot { animation: none; }
+        html { scroll-behavior: auto; }
+      }
+
+      /* ---------- hero ---------- */
+      .hero { padding: 56px 0 8px; }
+      .hero h1 {
+        font-size: clamp(42px, 7.2vw, 84px);
+        line-height: 0.98;
+        letter-spacing: -0.03em;
+        font-weight: 900;
+        margin: 0 0 22px;
+        max-width: 12ch;
+      }
+      .hero h1 .accent { color: var(--green); }
+      .hero .sub {
+        font-size: clamp(18px, 2.4vw, 22px);
+        color: var(--ink-soft);
+        max-width: 56ch;
+        margin: 0 0 28px;
+      }
+      .hero .sub strong { color: var(--ink); }
+      .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+      .btn {
+        display: inline-block;
+        background: var(--green); color: #fff;
+        font-weight: 700; font-size: 16px;
+        padding: 14px 26px; border-radius: 10px;
+        text-decoration: none; border: 2px solid var(--green);
+        transition: background .15s ease, transform .15s ease;
+      }
+      .btn:hover { background: var(--green-deep); border-color: var(--green-deep); }
+      .btn:active { transform: translateY(1px); }
+      .btn-ghost {
+        background: transparent; color: var(--ink);
+        border: 2px solid var(--line-strong);
+      }
+      .btn-ghost:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+      .proof {
+        margin: 40px 0 0;
+        border: 2px solid var(--line-strong);
+        border-radius: var(--radius);
+        padding: 18px 22px;
+        display: flex; flex-wrap: wrap; gap: 10px 36px; align-items: center;
+        background: var(--green-tint-2);
+      }
+      .proof .proof-label {
+        font-family: "Archivo Mono", ui-monospace, monospace;
+        font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
+        color: var(--green-deep);
+      }
+      .proof dl { display: flex; flex-wrap: wrap; gap: 10px 36px; margin: 0; }
+      .proof .stat { display: flex; flex-direction: column; }
+      .proof dt {
+        font-size: 12px; color: var(--ink-soft); font-weight: 600;
+        text-transform: uppercase; letter-spacing: 0.06em;
+      }
+      .proof dd { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+      .proof dd .hot { color: var(--green); }
+
+      /* ---------- flow strip ---------- */
+      .flow {
+        margin: 44px 0 0;
+        display: flex; flex-wrap: wrap; align-items: stretch; gap: 0;
+      }
+      .flow-node {
+        border: 2px solid var(--line-strong);
+        border-radius: 10px;
+        padding: 10px 16px;
+        font-weight: 700; font-size: 15px;
+        background: #fff;
+        display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+      }
+      .flow-node small { display: block; font-weight: 500; color: var(--ink-soft); font-size: 12.5px; }
+      .flow-node.ai { border-color: var(--green); background: var(--green-tint); }
+      .flow-arrow {
+        align-self: center; padding: 0 8px; color: var(--green);
+        font-weight: 900; font-size: 18px;
+      }
+
+      /* ---------- sections ---------- */
+      section { padding: 72px 0 0; }
+      h2 {
+        font-size: clamp(30px, 4.6vw, 44px);
+        font-weight: 900; letter-spacing: -0.025em; line-height: 1.05;
+        margin: 0 0 14px;
+      }
+      .section-lede { color: var(--ink-soft); max-width: 60ch; margin: 0 0 34px; font-size: 18px; }
+
+      /* steps */
+      .steps {
+        display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px;
+        list-style: none; margin: 0; padding: 0;
+      }
+      .step {
+        border: 2px solid var(--line);
+        border-radius: var(--radius);
+        padding: 26px 26px 24px;
+        background: #fff;
+      }
+      .step-num {
+        font-family: "Archivo Mono", ui-monospace, monospace;
+        font-size: 13px; font-weight: 600;
+        color: #fff; background: var(--green);
+        display: inline-block; padding: 4px 10px; border-radius: 6px;
+        margin-bottom: 16px;
+      }
+      .step h3 { margin: 0 0 8px; font-size: 21px; font-weight: 800; letter-spacing: -0.01em; }
+      .step p { margin: 0; color: var(--ink-soft); font-size: 16px; }
+
+      /* ---------- demo form ---------- */
+      .demo-grid {
+        display: grid; grid-template-columns: 1fr 1.15fr; gap: 44px; align-items: start;
+      }
+      .demo-copy p { color: var(--ink-soft); font-size: 18px; margin: 0 0 18px; max-width: 46ch; }
+      .demo-copy p strong { color: var(--ink); }
+      .expect { list-style: none; margin: 26px 0 0; padding: 0; display: grid; gap: 14px; }
+      .expect li { display: flex; gap: 12px; align-items: flex-start; font-size: 16px; }
+      .expect .tick {
+        flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%;
+        background: var(--green-tint); color: var(--green-deep);
+        display: grid; place-items: center; margin-top: 1px;
+      }
+      .expect .tick svg { width: 14px; height: 14px; }
+
+      .form-card {
+        border: 2px solid var(--line-strong);
+        border-radius: 18px;
+        padding: 30px;
+        background: #fff;
+        box-shadow: 8px 8px 0 var(--green-tint);
+      }
+      .form-card h3 { margin: 0 0 6px; font-size: 24px; font-weight: 900; letter-spacing: -0.02em; }
+      .form-card .form-note { margin: 0 0 24px; color: var(--ink-soft); font-size: 15px; }
+      .field { margin-bottom: 18px; }
+      label { display: block; font-weight: 700; font-size: 14.5px; margin-bottom: 7px; }
+      input, select, textarea {
+        width: 100%;
+        font: inherit; font-size: 16px;
+        padding: 12px 14px;
+        border: 1.5px solid var(--line);
+        border-radius: 10px;
+        background: #fff; color: var(--ink);
+      }
+      input:focus, select:focus, textarea:focus {
+        outline: 3px solid rgba(10,125,52,.28);
+        border-color: var(--green);
+      }
+      textarea { resize: vertical; min-height: 108px; }
+      .submit-btn {
+        width: 100%;
+        background: var(--green); color: #fff;
+        border: 2px solid var(--green);
+        font: inherit; font-weight: 800; font-size: 17px;
+        padding: 15px 20px; border-radius: 10px; cursor: pointer;
+        transition: background .15s ease;
+      }
+      .submit-btn:hover:not(:disabled) { background: var(--green-deep); border-color: var(--green-deep); }
+      .submit-btn:disabled { opacity: .65; cursor: wait; }
+      .form-fineprint { margin: 14px 0 0; font-size: 13.5px; color: var(--ink-soft); text-align: center; }
+      .form-error {
+        display: none;
+        margin: 0 0 18px; padding: 12px 14px;
+        border: 1.5px solid var(--error); border-radius: 10px;
+        color: var(--error); font-size: 15px; font-weight: 600;
+        background: #fdf1f0;
+      }
+      .form-error.show { display: block; }
+
+      .success-panel { display: none; text-align: left; }
+      .success-panel.show { display: block; }
+      .success-badge {
+        width: 56px; height: 56px; border-radius: 50%;
+        background: var(--green); color: #fff;
+        display: grid; place-items: center; margin-bottom: 18px;
+      }
+      .success-badge svg { width: 30px; height: 30px; }
+      .success-panel h3 { font-size: 26px; }
+      .success-panel p { color: var(--ink-soft); margin: 0 0 14px; }
+      .success-panel p strong { color: var(--ink); }
+      .again-btn {
+        background: transparent; border: none; padding: 0;
+        font: inherit; font-weight: 700; color: var(--green-deep);
+        text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+      }
+
+      /* ---------- built with ---------- */
+      .built {
+        margin-top: 72px;
+        border-top: 2px solid var(--line-strong);
+        border-bottom: 2px solid var(--line-strong);
+        padding: 26px 0;
+        display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px;
+      }
+      .built .built-label {
+        font-family: "Archivo Mono", ui-monospace, monospace;
+        font-size: 12.5px; font-weight: 600; letter-spacing: 0.1em; color: var(--ink-soft);
+      }
+      .built ul { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; }
+      .built li {
+        font-weight: 800; font-size: 16px;
+        border: 2px solid var(--ink); border-radius: 999px; padding: 7px 16px;
+      }
+
+      /* ---------- footer ---------- */
+      footer { padding: 44px 0 56px; }
+      .footer-row {
+        display: flex; flex-wrap: wrap; gap: 12px 28px;
+        align-items: center; justify-content: space-between;
+      }
+      .footer-name { font-weight: 900; font-size: 19px; letter-spacing: -0.01em; }
+      .footer-name span { color: var(--ink-soft); font-weight: 600; }
+      footer a {
+        color: var(--green-deep); font-weight: 700;
+        text-decoration: underline; text-underline-offset: 3px;
+      }
+      footer a:hover { color: var(--green); }
+
+      /* ---------- responsive ---------- */
+      @media (max-width: 820px) {
+        .demo-grid { grid-template-columns: 1fr; gap: 30px; }
+        .steps { grid-template-columns: 1fr; }
+        .hero { padding-top: 40px; }
+        section { padding-top: 56px; }
+        .form-card { padding: 24px 20px; box-shadow: 6px 6px 0 var(--green-tint); }
+        .flow-arrow { padding: 0 5px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="topbar">
+        <div class="brand">Instant Lead <span>Responder</span></div>
+        <div class="live-pill"><span class="live-dot" aria-hidden="true"></span> LIVE DEMO</div>
+      </div>
+
+      <header class="hero">
+        <h1>Your leads, answered in <span class="accent">seconds.</span></h1>
+        <p class="sub">
+          Most leads go cold while they wait for a reply. This automation doesn't let them wait:
+          an AI agent reads every new enquiry, scores it, and <strong>sends a personalised email reply
+          before a human could even open the inbox</strong> — then logs everything for you.
+        </p>
+        <div class="hero-cta">
+          <a class="btn" href="#demo">Try the live demo</a>
+          <a class="btn btn-ghost" href="#how">How it works</a>
+        </div>
+
+        <div class="proof" role="group" aria-label="Verified live test result">
+          <span class="proof-label">VERIFIED LIVE TEST</span>
+          <dl>
+            <div class="stat"><dt>AI lead score</dt><dd>95 / 100 — <span class="hot">Hot</span></dd></div>
+            <div class="stat"><dt>Reply</dt><dd>Personalised email sent</dd></div>
+            <div class="stat"><dt>Logging</dt><dd>Full row in Google Sheets</dd></div>
+          </dl>
+        </div>
+
+        <div class="flow" aria-label="Workflow overview">
+          <div class="flow-node">Lead form<small>The demo below</small></div>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <div class="flow-node ai">AI qualification<small>Score + category</small></div>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <div class="flow-node">Email reply<small>Hot: personalised · Others: acknowledgement</small></div>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <div class="flow-node">Google Sheets<small>Every lead logged</small></div>
+        </div>
+      </header>
+
+      <section id="how">
+        <h2>How it works</h2>
+        <p class="section-lede">One n8n workflow, running in production. From the moment a lead lands to a reply in their inbox — no human in the loop, no lead left waiting.</p>
+        <ol class="steps">
+          <li class="step">
+            <span class="step-num">STEP 1</span>
+            <h3>A lead comes in</h3>
+            <p>A visitor submits the enquiry form — name, email, the service they want, and their message. The workflow wakes up instantly.</p>
+          </li>
+          <li class="step">
+            <span class="step-num">STEP 2</span>
+            <h3>The AI qualifies it</h3>
+            <p>An AI agent reads the message and judges buying intent, returning a score out of 100 and a category — in seconds, not hours.</p>
+          </li>
+          <li class="step">
+            <span class="step-num">STEP 3</span>
+            <h3>The right reply goes out</h3>
+            <p>Hot leads (70+) get an instant, personalised email reply written for their enquiry. Everyone else gets a polite acknowledgement — nobody is ignored.</p>
+          </li>
+          <li class="step">
+            <span class="step-num">STEP 4</span>
+            <h3>Everything is logged</h3>
+            <p>Every lead — hot or not — is written to Google Sheets with its score, category and status, so the full pipeline is always visible.</p>
+          </li>
+        </ol>
+      </section>
+
+      <section id="demo">
+        <div class="demo-grid">
+          <div class="demo-copy">
+            <h2>Send a test lead</h2>
+            <p>This is <strong>not a mockup</strong>. The form talks to the live production workflow — submit it and the automation treats you exactly like a real customer enquiry.</p>
+            <ul class="expect">
+              <li>
+                <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                <span><strong>Use your real email</strong> — the reply is a real email, sent to you by the workflow.</span>
+              </li>
+              <li>
+                <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                <span><strong>Write like a buyer</strong> ("I need a chatbot for my store, what's the price and timeline?") and the AI will likely score you hot — and answer personally.</span>
+              </li>
+              <li>
+                <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                <span><strong>Check your inbox</strong> within a minute or so — and your spam folder, just in case.</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="form-card">
+            <form id="lead-form" novalidate>
+              <h3>Request a callback</h3>
+              <p class="form-note">Fill this in like a real enquiry — the AI agent is on the other end.</p>
+              <p class="form-error" id="form-error" role="alert"></p>
+
+              <div class="field">
+                <label for="f-name">Your name</label>
+                <input id="f-name" name="name" type="text" autocomplete="name" required placeholder="e.g. Sarah Mitchell" />
+              </div>
+              <div class="field">
+                <label for="f-email">Email address</label>
+                <input id="f-email" name="email" type="email" autocomplete="email" required placeholder="you@company.com" />
+              </div>
+              <div class="field">
+                <label for="f-service">Service you're interested in</label>
+                <select id="f-service" name="service" required>
+                  <option value="AI Agents &amp; Chatbots">AI Agents &amp; Chatbots</option>
+                  <option value="Workflow Automation (n8n)">Workflow Automation (n8n)</option>
+                  <option value="Lead Response Automation">Lead Response Automation</option>
+                  <option value="AI Automation Consulting">AI Automation Consulting</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="f-message">Your message</label>
+                <textarea id="f-message" name="message" required placeholder="Tell us what you need — the more specific, the better the AI can help."></textarea>
+              </div>
+
+              <button class="submit-btn" id="submit-btn" type="submit">Send my enquiry →</button>
+              <p class="form-fineprint">Live demo: your enquiry goes to the real workflow and you'll receive a real email reply.</p>
+            </form>
+
+            <div class="success-panel" id="success-panel" role="status">
+              <div class="success-badge" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              </div>
+              <h3>Lead received — check your inbox.</h3>
+              <p>The AI agent has your enquiry. If it scored you <strong>hot</strong>, a personalised reply is already on its way; otherwise you'll get a confirmation acknowledgement.</p>
+              <p>Your lead has also been <strong>logged in Google Sheets</strong> with its AI score and category.</p>
+              <button class="again-btn" id="again-btn" type="button">Send another lead</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="built">
+        <span class="built-label">BUILT WITH</span>
+        <ul>
+          <li>n8n</li>
+          <li>Groq AI</li>
+          <li>Gmail</li>
+          <li>Google Sheets</li>
+        </ul>
+      </div>
+
+      <footer>
+        <div class="footer-row">
+          <div class="footer-name">Fahad Khan <span>· AI Automation Specialist</span></div>
+          <a href="https://www.linkedin.com/in/fahad-khan-ai/" target="_blank" rel="noopener">Connect on LinkedIn →</a>
+        </div>
+      </footer>
+    </div>
+
+    <script>
+      (function () {
+        var WEBHOOK_URL = "https://kahad.app.n8n.cloud/webhook/lead";
+        var form = document.getElementById("lead-form");
+        var successPanel = document.getElementById("success-panel");
+        var errorBox = document.getElementById("form-error");
+        var submitBtn = document.getElementById("submit-btn");
+        var againBtn = document.getElementById("again-btn");
+
+        function showError(msg) {
+          errorBox.textContent = msg;
+          errorBox.classList.add("show");
+        }
+        function hideError() {
+          errorBox.textContent = "";
+          errorBox.classList.remove("show");
+        }
+
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          hideError();
+
+          var name = document.getElementById("f-name").value.trim();
+          var email = document.getElementById("f-email").value.trim();
+          var service = document.getElementById("f-service").value;
+          var message = document.getElementById("f-message").value.trim();
+
+          if (!name || !email || !message) {
+            showError("Please fill in your name, email and a short message so the AI has something to work with.");
+            return;
+          }
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            showError("That email address doesn't look right — the reply is sent by email, so it needs to be a real one.");
+            return;
+          }
+
+          submitBtn.disabled = true;
+          submitBtn.textContent = "Sending your lead…";
+
+          var body = new URLSearchParams();
+          body.append("name", name);
+          body.append("email", email);
+          body.append("service", service);
+          body.append("message", message);
+
+          fetch(WEBHOOK_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: body.toString()
+          }).then(function () {
+            form.style.display = "none";
+            successPanel.classList.add("show");
+            successPanel.scrollIntoView({ behavior: "smooth", block: "center" });
+          }).catch(function () {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Send my enquiry →";
+            showError("Something went wrong sending your lead. Please check your connection and try again.");
+          });
+        });
+
+        againBtn.addEventListener("click", function () {
+          form.reset();
+          hideError();
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Send my enquiry →";
+          successPanel.classList.remove("show");
+          form.style.display = "";
+          document.getElementById("f-name").focus();
+        });
+      })();
+    </script>
+  </body>
+</html>
