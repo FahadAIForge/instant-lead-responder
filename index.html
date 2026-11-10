@@ -20,6 +20,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Archivo+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <script type="importmap">
+      { "imports": { "three": "./three.module.min.js" } }
+    </script>
     <style>
       :root {
         --paper: #ffffff;
@@ -296,6 +299,65 @@
       }
       footer a:hover { color: var(--green); }
 
+      /* ---------- 3D pipeline stage ---------- */
+      .stage {
+        margin: 44px 0 0;
+        border: 2px solid var(--line-strong);
+        border-radius: 18px;
+        overflow: hidden;
+        background: #04120a;
+        position: relative;
+      }
+      .stage-viewport { position: relative; height: 480px; }
+      .stage-viewport canvas { display: block; width: 100%; height: 100%; }
+      .node-label {
+        position: absolute; left: 0; top: 0;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        background: rgba(4, 18, 10, 0.78);
+        color: #eafff1;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 999px;
+        padding: 7px 14px;
+        font-size: 13.5px; font-weight: 700;
+        white-space: nowrap;
+        will-change: transform;
+      }
+      .node-label strong { color: #7be3a8; font-weight: 800; }
+      .stage-caption {
+        display: flex; flex-wrap: wrap; gap: 8px 20px;
+        align-items: center; justify-content: space-between;
+        padding: 14px 20px;
+        background: #04120a; color: #b9d9c2;
+        border-top: 1px solid rgba(255, 255, 255, 0.14);
+        font-size: 14px;
+      }
+      .stage-caption .stage-live {
+        font-family: "Archivo Mono", ui-monospace, monospace;
+        font-size: 12px; font-weight: 600; letter-spacing: 0.08em;
+        color: #7be3a8;
+        display: inline-flex; align-items: center; gap: 8px;
+      }
+      .stage-caption .stage-live .live-dot { background: #12a150; }
+      .flow-fallback { display: none; background: #fff; padding: 26px 22px; }
+      .stage.no-webgl .stage-viewport { display: none; }
+      .stage.no-webgl .stage-caption { display: none; }
+      .stage.no-webgl .flow-fallback { display: block; }
+      .stage.no-webgl { background: #fff; }
+
+      /* ---------- real workflow screenshot ---------- */
+      .workflow-shot figure { margin: 0; }
+      .workflow-shot img {
+        display: block; width: 100%; height: auto;
+        border: 2px solid var(--line-strong);
+        border-radius: 18px;
+        background: var(--green-tint-2);
+      }
+      .workflow-shot figcaption {
+        margin-top: 14px; color: var(--ink-soft); font-size: 15px;
+      }
+      .workflow-shot figcaption strong { color: var(--ink); }
+
       /* ---------- responsive ---------- */
       @media (max-width: 820px) {
         .demo-grid { grid-template-columns: 1fr; gap: 30px; }
@@ -335,14 +397,29 @@
           </dl>
         </div>
 
-        <div class="flow" aria-label="Workflow overview">
-          <div class="flow-node">Lead form<small>The demo below</small></div>
-          <span class="flow-arrow" aria-hidden="true">→</span>
-          <div class="flow-node ai">AI qualification<small>Score + category</small></div>
-          <span class="flow-arrow" aria-hidden="true">→</span>
-          <div class="flow-node">Email reply<small>Hot: personalised · Others: acknowledgement</small></div>
-          <span class="flow-arrow" aria-hidden="true">→</span>
-          <div class="flow-node">Google Sheets<small>Every lead logged</small></div>
+        <div class="stage" id="pipeline-stage" aria-label="Live workflow: a lead flows through AI scoring to a personal email reply and a Google Sheets log">
+          <div class="stage-viewport" id="stage-viewport">
+            <canvas id="pipeline-canvas" aria-hidden="true"></canvas>
+            <div class="node-label" data-node="lead">New lead</div>
+            <div class="node-label" data-node="ai">AI scores it · <strong>95 / 100 hot</strong></div>
+            <div class="node-label" data-node="email">Personal reply sent</div>
+            <div class="node-label" data-node="sheet">Logged in Sheets</div>
+          </div>
+          <div class="stage-caption">
+            <span class="stage-live"><span class="live-dot" aria-hidden="true"></span> LIVE PIPELINE — LEADS FLOWING NOW</span>
+            <span>Move your cursor — the scene follows. Drag nothing; it runs itself.</span>
+          </div>
+          <div class="flow-fallback" aria-label="Workflow overview">
+            <div class="flow">
+              <div class="flow-node">Lead form<small>The demo below</small></div>
+              <span class="flow-arrow" aria-hidden="true">→</span>
+              <div class="flow-node ai">AI qualification<small>Score + category</small></div>
+              <span class="flow-arrow" aria-hidden="true">→</span>
+              <div class="flow-node">Email reply<small>Hot: personalised · Others: acknowledgement</small></div>
+              <span class="flow-arrow" aria-hidden="true">→</span>
+              <div class="flow-node">Google Sheets<small>Every lead logged</small></div>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -371,6 +448,15 @@
             <p>Every lead — hot or not — is written to Google Sheets with its score, category and status, so the full pipeline is always visible.</p>
           </li>
         </ol>
+      </section>
+
+      <section class="workflow-shot">
+        <h2>The actual workflow</h2>
+        <p class="section-lede">This is the real n8n workflow running in production — not a mockup. Fourteen nodes: webhook, AI qualification, email replies, and Sheets logging.</p>
+        <figure>
+          <img src="workflow.jpg" alt="Screenshot of the Instant Lead Responder workflow in the n8n editor: Lead Webhook, Normalize Lead, Build AI Request, AI Qualify Lead, Parse AI Result, Is Hot Lead, hot and cold branches, Confirm Receipt" width="1820" height="680" loading="lazy" />
+          <figcaption><strong>Live in n8n Cloud</strong> — workflow "Instant Lead Responder", published and active. The hot test lead scored 95 and got a personalised reply in seconds.</figcaption>
+        </figure>
       </section>
 
       <section id="demo">
@@ -528,6 +614,236 @@
           form.style.display = "";
           document.getElementById("f-name").focus();
         });
+      })();
+    </script>
+    <script>
+      /* Fallback: if the 3D scene cannot start (no WebGL, CDN blocked,
+         reduced motion, or a small phone screen), show the static flow. */
+      (function () {
+        var stage = document.getElementById("pipeline-stage");
+        var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var smallScreen = window.innerWidth < 640;
+        if (reduceMotion || smallScreen) { stage.classList.add("no-webgl"); return; }
+        window.__pipeline3dTimer = setTimeout(function () {
+          if (!window.__pipeline3dReady) { stage.classList.add("no-webgl"); }
+        }, 8000);
+      })();
+    </script>
+    <script type="module">
+      import * as THREE from "three";
+      if (window.__pipeline3dTimer) { clearTimeout(window.__pipeline3dTimer); }
+
+      (function () {
+        var stage = document.getElementById("pipeline-stage");
+        var viewport = document.getElementById("stage-viewport");
+        var canvas = document.getElementById("pipeline-canvas");
+        if (!stage || !viewport || !canvas) return;
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        if (window.innerWidth < 640) return;
+
+        var renderer;
+        try {
+          renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
+        } catch (e) {
+          stage.classList.add("no-webgl");
+          return;
+        }
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+        var scene = new THREE.Scene();
+        var BG = 0x04120a;
+        scene.background = new THREE.Color(BG);
+        scene.fog = new THREE.FogExp2(BG, 0.045);
+
+        var camera = new THREE.PerspectiveCamera(45, 2, 0.1, 100);
+        camera.position.set(0, 0.5, 10.5);
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+        var keyLight = new THREE.PointLight(0x12a150, 60, 30);
+        keyLight.position.set(-1.4, 1.5, 3);
+        scene.add(keyLight);
+        var fillLight = new THREE.PointLight(0xffffff, 12, 30);
+        fillLight.position.set(5, -1, 4);
+        scene.add(fillLight);
+
+        /* The pipeline: four nodes on a gentle curve. Scale is the cue —
+           the small lead dot grows into the big AI orb, then settles. */
+        var nodeDefs = [
+          { id: "lead",  pos: [-4.7, 0.7, 0],    r: 0.34, color: 0xeafff1, emissive: 0x9fd8b4, ei: 0.5 },
+          { id: "ai",    pos: [-1.5, -0.55, 0.7], r: 0.95, color: 0x12a150, emissive: 0x12a150, ei: 1.0 },
+          { id: "email", pos: [1.7, 0.75, -0.4],  r: 0.52, color: 0x7be3a8, emissive: 0x12a150, ei: 0.7 },
+          { id: "sheet", pos: [4.7, -0.45, 0.2],  r: 0.52, color: 0xeafff1, emissive: 0x9fd8b4, ei: 0.5 }
+        ];
+        var nodes = {};
+        nodeDefs.forEach(function (d) {
+          var mesh = new THREE.Mesh(
+            new THREE.SphereGeometry(d.r, 48, 32),
+            new THREE.MeshStandardMaterial({ color: d.color, emissive: d.emissive, emissiveIntensity: d.ei, roughness: 0.35, metalness: 0.1 })
+          );
+          mesh.position.set(d.pos[0], d.pos[1], d.pos[2]);
+          scene.add(mesh);
+          nodes[d.id] = mesh;
+        });
+
+        /* Glow halo around the AI node. */
+        function glowTexture() {
+          var c = document.createElement("canvas");
+          c.width = c.height = 128;
+          var g = c.getContext("2d");
+          var grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+          grad.addColorStop(0, "rgba(123,227,168,0.85)");
+          grad.addColorStop(0.35, "rgba(18,161,80,0.35)");
+          grad.addColorStop(1, "rgba(18,161,80,0)");
+          g.fillStyle = grad;
+          g.fillRect(0, 0, 128, 128);
+          return new THREE.CanvasTexture(c);
+        }
+        var halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), transparent: true, depthWrite: false }));
+        halo.scale.set(4.6, 4.6, 1);
+        halo.position.copy(nodes.ai.position);
+        scene.add(halo);
+
+        /* Slow orbit ring around the AI node — the "95" score ring. */
+        var ring = new THREE.Mesh(
+          new THREE.TorusGeometry(1.35, 0.02, 12, 80),
+          new THREE.MeshBasicMaterial({ color: 0x7be3a8, transparent: true, opacity: 0.7 })
+        );
+        ring.position.copy(nodes.ai.position);
+        ring.rotation.x = Math.PI / 2.6;
+        scene.add(ring);
+
+        /* The path the leads travel. */
+        var curve = new THREE.CatmullRomCurve3(
+          nodeDefs.map(function (d) { return new THREE.Vector3(d.pos[0], d.pos[1], d.pos[2]); })
+        );
+        var tube = new THREE.Mesh(
+          new THREE.TubeGeometry(curve, 80, 0.028, 8, false),
+          new THREE.MeshBasicMaterial({ color: 0x12a150, transparent: true, opacity: 0.4 })
+        );
+        scene.add(tube);
+
+        /* Flowing leads: particles travelling along the path. */
+        var FLOW_COUNT = 420;
+        var flowGeo = new THREE.BufferGeometry();
+        var flowPos = new Float32Array(FLOW_COUNT * 3);
+        var flowT = [];
+        for (var i = 0; i < FLOW_COUNT; i++) {
+          flowT.push({ t: Math.random(), speed: 0.05 + Math.random() * 0.11 });
+        }
+        flowGeo.setAttribute("position", new THREE.BufferAttribute(flowPos, 3));
+        var flow = new THREE.Points(flowGeo, new THREE.PointsMaterial({
+          color: 0x7be3a8, size: 0.085, transparent: true, opacity: 0.95,
+          blending: THREE.AdditiveBlending, depthWrite: false
+        }));
+        scene.add(flow);
+
+        /* Faint dust for depth. */
+        var DUST = 220;
+        var dustGeo = new THREE.BufferGeometry();
+        var dustPos = new Float32Array(DUST * 3);
+        for (var j = 0; j < DUST; j++) {
+          dustPos[j * 3] = (Math.random() - 0.5) * 16;
+          dustPos[j * 3 + 1] = (Math.random() - 0.5) * 6;
+          dustPos[j * 3 + 2] = (Math.random() - 0.5) * 5 - 1;
+        }
+        dustGeo.setAttribute("position", new THREE.BufferAttribute(dustPos, 3));
+        scene.add(new THREE.Points(dustGeo, new THREE.PointsMaterial({
+          color: 0x9fd8b4, size: 0.05, transparent: true, opacity: 0.4, depthWrite: false
+        })));
+
+        /* A faint floor grid — the reference object that gives the
+           scene its sense of scale. */
+        var grid = new THREE.GridHelper(16, 16, 0x0a7d34, 0x0a3d1e);
+        grid.position.y = -2.4;
+        grid.material.transparent = true;
+        grid.material.opacity = 0.28;
+        scene.add(grid);
+
+        /* HTML labels track the nodes. */
+        var labelEls = {};
+        document.querySelectorAll(".node-label").forEach(function (el) {
+          labelEls[el.getAttribute("data-node")] = el;
+        });
+        var v3 = new THREE.Vector3();
+        function placeLabels() {
+          var w = viewport.clientWidth, h = viewport.clientHeight;
+          Object.keys(labelEls).forEach(function (id) {
+            var el = labelEls[id];
+            var node = nodes[id];
+            if (!node) return;
+            v3.copy(node.position).project(camera);
+            if (v3.z > 1) { el.style.opacity = "0"; return; }
+            el.style.opacity = "1";
+            var x = (v3.x * 0.5 + 0.5) * w;
+            var y = (-v3.y * 0.5 + 0.5) * h;
+            var lift = id === "ai" ? -72 : -58;
+            el.style.transform = "translate(-50%, -50%) translate(" + x.toFixed(1) + "px," + (y + lift).toFixed(1) + "px)";
+          });
+        }
+
+        /* Parallax: the camera follows the cursor, gently. */
+        var pointer = { x: 0, y: 0 };
+        stage.addEventListener("pointermove", function (e) {
+          var r = viewport.getBoundingClientRect();
+          pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+          pointer.y = -(((e.clientY - r.top) / r.height) * 2 - 1);
+        });
+        stage.addEventListener("pointerleave", function () { pointer.x = 0; pointer.y = 0; });
+
+        function resize() {
+          var w = viewport.clientWidth, h = viewport.clientHeight;
+          if (!w || !h) return;
+          renderer.setSize(w, h, false);
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+        }
+        window.addEventListener("resize", resize);
+        resize();
+
+        var running = true;
+        var visible = true;
+        if ("IntersectionObserver" in window) {
+          new IntersectionObserver(function (entries) {
+            visible = entries[0].isIntersecting;
+          }, { threshold: 0.02 }).observe(stage);
+        }
+        document.addEventListener("visibilitychange", function () {
+          running = !document.hidden;
+        });
+
+        var clock = new THREE.Clock();
+        var tmp = new THREE.Vector3();
+        function tick() {
+          requestAnimationFrame(tick);
+          if (!running || !visible) return;
+          var dt = Math.min(clock.getDelta(), 0.05);
+          var t = clock.elapsedTime;
+
+          for (var i = 0; i < FLOW_COUNT; i++) {
+            var f = flowT[i];
+            f.t += f.speed * dt;
+            if (f.t > 1) f.t -= 1;
+            tmp.copy(curve.getPointAt(f.t));
+            flowPos[i * 3] = tmp.x;
+            flowPos[i * 3 + 1] = tmp.y;
+            flowPos[i * 3 + 2] = tmp.z;
+          }
+          flowGeo.attributes.position.needsUpdate = true;
+
+          var pulse = 1 + Math.sin(t * 2.2) * 0.06;
+          nodes.ai.scale.setScalar(pulse);
+          halo.material.opacity = 0.75 + Math.sin(t * 2.2) * 0.2;
+          ring.rotation.z = t * 0.35;
+
+          camera.position.x += (pointer.x * 0.7 - camera.position.x) * 0.04;
+          camera.position.y += (0.5 + pointer.y * 0.35 - camera.position.y) * 0.04;
+          camera.lookAt(0, 0, 0);
+
+          placeLabels();
+          renderer.render(scene, camera);
+        }
+        tick();
+        window.__pipeline3dReady = true;
       })();
     </script>
   </body>
