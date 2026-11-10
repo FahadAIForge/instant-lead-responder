@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="dark" />
     <link rel="icon" href="data:," />
     <title>Instant Lead Responder — Live Demo</title>
     <meta name="description" content="A live n8n + AI automation: submit a lead and an AI agent qualifies it and replies by email in seconds." />
@@ -37,12 +37,19 @@
         --line-strong: #0e1510;
         --error: #b3261e;
         --radius: 14px;
+        /* Dark-glass panels floating over the 3D world (21st.dev style:
+           near-black base, hairline borders, soft shadow). */
+        --glass: rgba(255, 255, 255, 0.04);
+        --glass-border: rgba(255, 255, 255, 0.10);
       }
       * { box-sizing: border-box; }
       html { scroll-behavior: smooth; }
       body {
         margin: 0;
-        background: var(--paper);
+        /* Near-black world (21st.dev / shader-hero style): the page and
+           the 3D scene share one deep black tone, so the scene IS the
+           page. Content stays in dark-glass panels, so text stays readable. */
+        background: #04050a;
         color: var(--ink);
         font-family: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
         font-size: 17px;
@@ -51,22 +58,54 @@
       }
       ::selection { background: var(--green); color: #fff; }
 
-      .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+      /* ---------- the 3D world (fixed behind everything) ---------- */
+      #bg-canvas {
+        position: fixed; inset: 0;
+        width: 100%; height: 100%;
+        display: block; z-index: 0;
+        pointer-events: none;
+      }
+      .node-label {
+        position: fixed; left: 0; top: 0;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        background: rgba(5, 46, 22, 0.92);
+        color: #d1fae5;
+        border: 1px solid rgba(52, 211, 153, 0.6);
+        border-radius: 999px;
+        padding: 7px 14px;
+        font-size: 13.5px; font-weight: 700;
+        white-space: nowrap;
+        will-change: transform;
+        z-index: 1;
+      }
+      .node-label strong { color: #6ee7b7; font-weight: 800; }
+      @media (max-width: 640px) {
+        .node-label { font-size: 11.5px; padding: 5px 10px; }
+      }
+      /* No 3D (no WebGL / reduced motion / failed start): hide the
+         canvas and labels, show the static flow strip instead. */
+      body.no-webgl #bg-canvas,
+      body.no-webgl .node-label { display: none; }
+      .flow-fallback { display: none; }
+      body.no-webgl .flow-fallback { display: block; }
+
+      .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 2; }
 
       /* ---------- top bar ---------- */
       .topbar {
         display: flex; align-items: center; justify-content: space-between;
         gap: 16px; padding: 20px 0 0;
       }
-      .brand { font-weight: 900; letter-spacing: -0.02em; font-size: 19px; }
-      .brand span { color: var(--green); }
+      .brand { font-weight: 900; letter-spacing: -0.02em; font-size: 19px; color: #f4fbf6; }
+      .brand span { color: #34d399; }
       .live-pill {
         display: inline-flex; align-items: center; gap: 8px;
         font-family: "Archivo Mono", ui-monospace, monospace;
         font-size: 12px; font-weight: 600; letter-spacing: 0.08em;
-        color: var(--green-deep);
-        border: 1.5px solid var(--green);
-        background: var(--green-tint);
+        color: #6ee7b7;
+        border: 1.5px solid #34d399;
+        background: rgba(16, 185, 129, 0.14);
         padding: 6px 12px; border-radius: 999px;
         white-space: nowrap;
       }
@@ -82,82 +121,131 @@
       @media (prefers-reduced-motion: reduce) {
         .live-dot { animation: none; }
         html { scroll-behavior: auto; }
+        .scroll-arrow { animation: none; }
       }
 
       /* ---------- hero ---------- */
-      .hero { padding: 56px 0 8px; }
+      .hero { padding: 56px 0 8px; position: relative; }
+      .hero-eyebrow {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-family: "Archivo Mono", ui-monospace, monospace;
+        font-size: 12px; font-weight: 600; letter-spacing: 0.08em;
+        color: #a7f3d0;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 999px; padding: 7px 14px;
+        margin-bottom: 20px;
+        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      }
+      .hero-eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: #2de08f; box-shadow: 0 0 10px rgba(45, 224, 143, 0.9); }
+      /* Film grain over the whole page (3-4% noise) — removes the
+         digital flatness, like the reference shader heroes. */
+      .grain {
+        position: fixed; inset: 0; z-index: 3; pointer-events: none;
+        opacity: 0.035;
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="140" height="140" filter="url(%23n)"/></svg>');
+      }
       .hero h1 {
-        font-size: clamp(42px, 7.2vw, 84px);
-        line-height: 0.98;
-        letter-spacing: -0.03em;
+        font-size: clamp(48px, 8vw, 96px);
+        line-height: 0.95;
+        letter-spacing: -0.035em;
         font-weight: 900;
         margin: 0 0 22px;
         max-width: 12ch;
+        background: linear-gradient(180deg, #ffffff 0%, #a7f3d0 45%, #2de08f 100%);
+        -webkit-background-clip: text; background-clip: text;
+        -webkit-text-fill-color: transparent; color: transparent;
       }
-      .hero h1 .accent { color: var(--green); }
+      .hero h1 .accent {
+        background: linear-gradient(90deg, #2de08f, #6ee7ff, #e14b8a);
+        -webkit-background-clip: text; background-clip: text;
+        -webkit-text-fill-color: transparent; color: transparent;
+        filter: drop-shadow(0 0 32px rgba(45, 224, 143, 0.6));
+      }
       .hero .sub {
         font-size: clamp(18px, 2.4vw, 22px);
-        color: var(--ink-soft);
-        max-width: 56ch;
+        color: rgba(255, 255, 255, 0.78);
+        max-width: 46ch;
         margin: 0 0 28px;
       }
-      .hero .sub strong { color: var(--ink); }
+      .hero .sub strong { color: #ffffff; }
       .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
       .btn {
         display: inline-block;
-        background: var(--green); color: #fff;
-        font-weight: 700; font-size: 16px;
+        background: #2de08f; color: #04120a;
+        font-weight: 800; font-size: 16px;
         padding: 14px 26px; border-radius: 10px;
-        text-decoration: none; border: 2px solid var(--green);
+        text-decoration: none; border: 2px solid #2de08f;
+        box-shadow: 0 0 40px rgba(45, 224, 143, 0.35);
         transition: background .15s ease, transform .15s ease;
       }
-      .btn:hover { background: var(--green-deep); border-color: var(--green-deep); }
+      .btn:hover { background: #34d399; border-color: #34d399; }
       .btn:active { transform: translateY(1px); }
       .btn-ghost {
-        background: transparent; color: var(--ink);
-        border: 2px solid var(--line-strong);
+        background: rgba(255, 255, 255, 0.06); color: #f4fbf6;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        box-shadow: none;
       }
-      .btn-ghost:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+      .btn-ghost:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.28); }
 
       .proof {
         margin: 40px 0 0;
-        border: 2px solid var(--line-strong);
-        border-radius: var(--radius);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
         padding: 18px 22px;
         display: flex; flex-wrap: wrap; gap: 10px 36px; align-items: center;
-        background: var(--green-tint-2);
+        background: var(--glass);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
       }
       .proof .proof-label {
         font-family: "Archivo Mono", ui-monospace, monospace;
         font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
-        color: var(--green-deep);
+        color: #6ee7b7;
       }
       .proof dl { display: flex; flex-wrap: wrap; gap: 10px 36px; margin: 0; }
       .proof .stat { display: flex; flex-direction: column; }
       .proof dt {
-        font-size: 12px; color: var(--ink-soft); font-weight: 600;
+        font-size: 12px; color: rgba(255, 255, 255, 0.55); font-weight: 600;
         text-transform: uppercase; letter-spacing: 0.06em;
       }
-      .proof dd { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
-      .proof dd .hot { color: var(--green); }
+      .proof dd { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; color: #fff; }
+      .proof dd .hot { color: #34d399; }
 
-      /* ---------- flow strip ---------- */
+      .scroll-hint {
+        margin: 36px 0 0;
+        display: flex; flex-direction: column; align-items: center; gap: 2px;
+        font-family: "Archivo Mono", ui-monospace, monospace;
+        font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
+        color: #6ee7b7;
+        text-align: center;
+      }
+      .scroll-arrow { font-size: 18px; animation: bob 1.8s ease-in-out infinite; }
+      @keyframes bob {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(5px); }
+      }
+
+      /* ---------- flow strip (static fallback) ---------- */
       .flow {
         margin: 44px 0 0;
         display: flex; flex-wrap: wrap; align-items: stretch; gap: 0;
       }
       .flow-node {
-        border: 2px solid var(--line-strong);
+        border: 2px solid rgba(244, 251, 246, 0.4);
         border-radius: 10px;
         padding: 10px 16px;
         font-weight: 700; font-size: 15px;
-        background: #fff;
+        background: #0a1410;
+        color: #f4fbf6;
         display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
       }
-      .flow-node small { display: block; font-weight: 500; color: var(--ink-soft); font-size: 12.5px; }
-      .flow-node.ai { border-color: var(--green); background: var(--green-tint); }
+      .flow-node small { display: block; font-weight: 500; color: rgba(255, 255, 255, 0.55); font-size: 12.5px; }
+      .flow-node.ai { border-color: #34d399; background: rgba(16, 185, 129, 0.2); }
       .flow-arrow {
-        align-self: center; padding: 0 8px; color: var(--green);
+        align-self: center; padding: 0 8px; color: #34d399;
         font-weight: 900; font-size: 18px;
       }
 
@@ -167,8 +255,9 @@
         font-size: clamp(30px, 4.6vw, 44px);
         font-weight: 900; letter-spacing: -0.025em; line-height: 1.05;
         margin: 0 0 14px;
+        color: #f4fbf6;
       }
-      .section-lede { color: var(--ink-soft); max-width: 60ch; margin: 0 0 34px; font-size: 18px; }
+      .section-lede { color: rgba(255, 255, 255, 0.62); max-width: 60ch; margin: 0 0 34px; font-size: 18px; }
 
       /* steps */
       .steps {
@@ -176,77 +265,85 @@
         list-style: none; margin: 0; padding: 0;
       }
       .step {
-        border: 2px solid var(--line);
-        border-radius: var(--radius);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
         padding: 26px 26px 24px;
-        background: #fff;
+        background: var(--glass);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
       }
       .step-num {
         font-family: "Archivo Mono", ui-monospace, monospace;
         font-size: 13px; font-weight: 600;
-        color: #fff; background: var(--green);
+        color: #04120a; background: #2de08f;
         display: inline-block; padding: 4px 10px; border-radius: 6px;
         margin-bottom: 16px;
       }
-      .step h3 { margin: 0 0 8px; font-size: 21px; font-weight: 800; letter-spacing: -0.01em; }
-      .step p { margin: 0; color: var(--ink-soft); font-size: 16px; }
+      .step h3 { margin: 0 0 8px; font-size: 21px; font-weight: 800; letter-spacing: -0.01em; color: #fff; }
+      .step p { margin: 0; color: rgba(255, 255, 255, 0.65); font-size: 16px; }
 
       /* ---------- demo form ---------- */
       .demo-grid {
         display: grid; grid-template-columns: 1fr 1.15fr; gap: 44px; align-items: start;
       }
-      .demo-copy p { color: var(--ink-soft); font-size: 18px; margin: 0 0 18px; max-width: 46ch; }
-      .demo-copy p strong { color: var(--ink); }
+      .demo-copy p { color: rgba(255, 255, 255, 0.62); font-size: 18px; margin: 0 0 18px; max-width: 46ch; }
+      .demo-copy p strong { color: #ffffff; }
       .expect { list-style: none; margin: 26px 0 0; padding: 0; display: grid; gap: 14px; }
-      .expect li { display: flex; gap: 12px; align-items: flex-start; font-size: 16px; }
+      .expect li { display: flex; gap: 12px; align-items: flex-start; font-size: 16px; color: rgba(255, 255, 255, 0.62); }
+      .expect li strong { color: #ffffff; }
       .expect .tick {
         flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%;
-        background: var(--green-tint); color: var(--green-deep);
+        background: rgba(45, 224, 143, 0.15); color: #6ee7b7;
         display: grid; place-items: center; margin-top: 1px;
       }
       .expect .tick svg { width: 14px; height: 14px; }
 
       .form-card {
-        border: 2px solid var(--line-strong);
+        border: 1px solid var(--glass-border);
         border-radius: 18px;
         padding: 30px;
-        background: #fff;
-        box-shadow: 8px 8px 0 var(--green-tint);
+        background: var(--glass);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
       }
-      .form-card h3 { margin: 0 0 6px; font-size: 24px; font-weight: 900; letter-spacing: -0.02em; }
-      .form-card .form-note { margin: 0 0 24px; color: var(--ink-soft); font-size: 15px; }
+      .form-card h3 { margin: 0 0 6px; font-size: 24px; font-weight: 900; letter-spacing: -0.02em; color: #fff; }
+      .form-card .form-note { margin: 0 0 24px; color: rgba(255, 255, 255, 0.6); font-size: 15px; }
       .field { margin-bottom: 18px; }
-      label { display: block; font-weight: 700; font-size: 14.5px; margin-bottom: 7px; }
+      label { display: block; font-weight: 700; font-size: 14.5px; margin-bottom: 7px; color: #fff; }
       input, select, textarea {
         width: 100%;
         font: inherit; font-size: 16px;
         padding: 12px 14px;
-        border: 1.5px solid var(--line);
+        border: 1.5px solid rgba(255, 255, 255, 0.15);
         border-radius: 10px;
-        background: #fff; color: var(--ink);
+        background: rgba(255, 255, 255, 0.06); color: #fff;
       }
+      input::placeholder, textarea::placeholder { color: rgba(255, 255, 255, 0.4); }
       input:focus, select:focus, textarea:focus {
-        outline: 3px solid rgba(10,125,52,.28);
-        border-color: var(--green);
+        outline: 3px solid rgba(45, 224, 143, 0.28);
+        border-color: #2de08f;
       }
       textarea { resize: vertical; min-height: 108px; }
       .submit-btn {
         width: 100%;
-        background: var(--green); color: #fff;
-        border: 2px solid var(--green);
+        background: #2de08f; color: #04120a;
+        border: 2px solid #2de08f;
         font: inherit; font-weight: 800; font-size: 17px;
         padding: 15px 20px; border-radius: 10px; cursor: pointer;
+        box-shadow: 0 0 40px rgba(45, 224, 143, 0.3);
         transition: background .15s ease;
       }
-      .submit-btn:hover:not(:disabled) { background: var(--green-deep); border-color: var(--green-deep); }
+      .submit-btn:hover:not(:disabled) { background: #34d399; border-color: #34d399; }
       .submit-btn:disabled { opacity: .65; cursor: wait; }
-      .form-fineprint { margin: 14px 0 0; font-size: 13.5px; color: var(--ink-soft); text-align: center; }
+      .form-fineprint { margin: 14px 0 0; font-size: 13.5px; color: rgba(255, 255, 255, 0.55); text-align: center; }
       .form-error {
         display: none;
         margin: 0 0 18px; padding: 12px 14px;
-        border: 1.5px solid var(--error); border-radius: 10px;
-        color: var(--error); font-size: 15px; font-weight: 600;
-        background: #fdf1f0;
+        border: 1.5px solid rgba(255, 120, 110, 0.5); border-radius: 10px;
+        color: #ffb4ab; font-size: 15px; font-weight: 600;
+        background: rgba(179, 38, 30, 0.15);
       }
       .form-error.show { display: block; }
 
@@ -254,113 +351,72 @@
       .success-panel.show { display: block; }
       .success-badge {
         width: 56px; height: 56px; border-radius: 50%;
-        background: var(--green); color: #fff;
+        background: #2de08f; color: #04120a;
         display: grid; place-items: center; margin-bottom: 18px;
       }
       .success-badge svg { width: 30px; height: 30px; }
       .success-panel h3 { font-size: 26px; }
-      .success-panel p { color: var(--ink-soft); margin: 0 0 14px; }
-      .success-panel p strong { color: var(--ink); }
+      .success-panel p { color: rgba(255, 255, 255, 0.65); margin: 0 0 14px; }
+      .success-panel p strong { color: #fff; }
       .again-btn {
         background: transparent; border: none; padding: 0;
-        font: inherit; font-weight: 700; color: var(--green-deep);
+        font: inherit; font-weight: 700; color: #6ee7b7;
         text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
       }
 
       /* ---------- built with ---------- */
       .built {
         margin-top: 72px;
-        border-top: 2px solid var(--line-strong);
-        border-bottom: 2px solid var(--line-strong);
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
         padding: 26px 0;
         display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px;
       }
       .built .built-label {
         font-family: "Archivo Mono", ui-monospace, monospace;
-        font-size: 12.5px; font-weight: 600; letter-spacing: 0.1em; color: var(--ink-soft);
+        font-size: 12.5px; font-weight: 600; letter-spacing: 0.1em; color: rgba(255, 255, 255, 0.5);
       }
       .built ul { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; }
       .built li {
-        font-weight: 800; font-size: 16px;
-        border: 2px solid var(--ink); border-radius: 999px; padding: 7px 16px;
+        font-weight: 800; font-size: 16px; color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 999px; padding: 7px 16px;
+        background: rgba(255, 255, 255, 0.06);
       }
 
       /* ---------- footer ---------- */
-      footer { padding: 44px 0 56px; }
+      footer { padding: 32px 0 36px; }
       .footer-row {
         display: flex; flex-wrap: wrap; gap: 12px 28px;
         align-items: center; justify-content: space-between;
       }
-      .footer-name { font-weight: 900; font-size: 19px; letter-spacing: -0.01em; }
-      .footer-name span { color: var(--ink-soft); font-weight: 600; }
+      .footer-name { font-weight: 900; font-size: 19px; letter-spacing: -0.01em; color: #f4fbf6; }
+      .footer-name span { color: rgba(255, 255, 255, 0.5); font-weight: 600; }
       footer a {
-        color: var(--green-deep); font-weight: 700;
+        color: #6ee7b7; font-weight: 700;
         text-decoration: underline; text-underline-offset: 3px;
       }
-      footer a:hover { color: var(--green); }
-
-      /* ---------- 3D pipeline stage ---------- */
-      .stage {
-        margin: 44px 0 0;
-        border: 2px solid var(--line-strong);
-        border-radius: 18px;
-        overflow: hidden;
-        background: #04120a;
-        position: relative;
-      }
-      .stage-viewport { position: relative; height: 480px; }
-      @media (max-width: 640px) {
-        .stage-viewport { height: 420px; }
-        .node-label { font-size: 11.5px; padding: 5px 10px; }
-      }
-      .stage-viewport canvas { display: block; width: 100%; height: 100%; }
-      .node-label {
-        position: absolute; left: 0; top: 0;
-        transform: translate(-50%, -50%);
-        pointer-events: none;
-        background: rgba(4, 18, 10, 0.78);
-        color: #eafff1;
-        border: 1px solid rgba(255, 255, 255, 0.28);
-        border-radius: 999px;
-        padding: 7px 14px;
-        font-size: 13.5px; font-weight: 700;
-        white-space: nowrap;
-        will-change: transform;
-      }
-      .node-label strong { color: #7be3a8; font-weight: 800; }
-      .stage-caption {
-        display: flex; flex-wrap: wrap; gap: 8px 20px;
-        align-items: center; justify-content: space-between;
-        padding: 14px 20px;
-        background: #04120a; color: #b9d9c2;
-        border-top: 1px solid rgba(255, 255, 255, 0.14);
-        font-size: 14px;
-      }
-      .stage-caption .stage-live {
-        font-family: "Archivo Mono", ui-monospace, monospace;
-        font-size: 12px; font-weight: 600; letter-spacing: 0.08em;
-        color: #7be3a8;
-        display: inline-flex; align-items: center; gap: 8px;
-      }
-      .stage-caption .stage-live .live-dot { background: #12a150; }
-      .flow-fallback { display: none; background: #fff; padding: 26px 22px; }
-      .stage.no-webgl .stage-viewport { display: none; }
-      .stage.no-webgl .stage-caption { display: none; }
-      .stage.no-webgl .flow-fallback { display: block; }
-      .stage.no-webgl { background: #fff; }
+      footer a:hover { color: #34d399; }
 
       /* ---------- real workflow screenshot ---------- */
-      .workflow-shot figure { margin: 0; }
-      .workflow-shot img {
-        display: block; width: 100%; height: auto;
-        border: 2px solid var(--line-strong);
+      .workflow-shot figure {
+        margin: 0;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.12);
         border-radius: 18px;
-        background: var(--green-tint-2);
+        background: #0a0f1e;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 80px rgba(45, 224, 143, 0.15);
+        transform: perspective(1200px) rotateX(6deg);
+        transform-origin: center top;
+      }
+      /* Cropped to the left ~70% (webhook -> AI -> hot branch) at a
+         readable size, instead of the whole editor shrunk to a strip. */
+      .workflow-shot img {
+        display: block; width: 135%; max-width: none; height: auto;
       }
       .workflow-shot figcaption {
-        margin-top: 14px; color: var(--ink-soft); font-size: 15px;
+        margin-top: 14px; color: rgba(255, 255, 255, 0.55); font-size: 15px;
       }
-      .workflow-shot figcaption strong { color: var(--ink); }
+      .workflow-shot figcaption strong { color: #ffffff; }
 
       /* ---------- responsive ---------- */
       @media (max-width: 820px) {
@@ -368,12 +424,20 @@
         .steps { grid-template-columns: 1fr; }
         .hero { padding-top: 40px; }
         section { padding-top: 56px; }
-        .form-card { padding: 24px 20px; box-shadow: 6px 6px 0 var(--green-tint); }
+        .form-card { padding: 24px 20px; }
         .flow-arrow { padding: 0 5px; }
       }
     </style>
   </head>
   <body>
+    <!-- The 3D world: one fixed canvas behind the whole page. -->
+    <canvas id="bg-canvas" aria-hidden="true"></canvas>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="node-label" data-node="lead">New lead</div>
+    <div class="node-label" data-node="ai">AI scores it · <strong>95 / 100 hot</strong></div>
+    <div class="node-label" data-node="email">Personal reply sent</div>
+    <div class="node-label" data-node="sheet">Logged in Sheets</div>
+
     <div class="wrap">
       <div class="topbar">
         <div class="brand">Instant Lead <span>Responder</span></div>
@@ -381,11 +445,12 @@
       </div>
 
       <header class="hero">
+        <div class="hero-eyebrow"><span class="dot" aria-hidden="true"></span>AI LEAD RESPONDER · N8N + GROQ</div>
         <h1>Your leads, answered in <span class="accent">seconds.</span></h1>
         <p class="sub">
-          Most leads go cold while they wait for a reply. This automation doesn't let them wait:
-          an AI agent reads every new enquiry, scores it, and <strong>sends a personalised email reply
-          before a human could even open the inbox</strong> — then logs everything for you.
+          Most leads go cold while they wait. This one doesn't — an AI agent reads every enquiry,
+          scores it, and <strong>sends a personalised email reply before a human could even open
+          the inbox</strong>. Then logs everything for you.
         </p>
         <div class="hero-cta">
           <a class="btn" href="#demo">Try the live demo</a>
@@ -401,28 +466,20 @@
           </dl>
         </div>
 
-        <div class="stage" id="pipeline-stage" aria-label="Live workflow: a lead flows through AI scoring to a personal email reply and a Google Sheets log">
-          <div class="stage-viewport" id="stage-viewport">
-            <canvas id="pipeline-canvas" aria-hidden="true"></canvas>
-            <div class="node-label" data-node="lead">New lead</div>
-            <div class="node-label" data-node="ai">AI scores it · <strong>95 / 100 hot</strong></div>
-            <div class="node-label" data-node="email">Personal reply sent</div>
-            <div class="node-label" data-node="sheet">Logged in Sheets</div>
-          </div>
-          <div class="stage-caption">
-            <span class="stage-live"><span class="live-dot" aria-hidden="true"></span> LIVE PIPELINE — LEADS FLOWING NOW</span>
-            <span>Drag or move your cursor — the scene follows. It runs itself.</span>
-          </div>
-          <div class="flow-fallback" aria-label="Workflow overview">
-            <div class="flow">
-              <div class="flow-node">Lead form<small>The demo below</small></div>
-              <span class="flow-arrow" aria-hidden="true">→</span>
-              <div class="flow-node ai">AI qualification<small>Score + category</small></div>
-              <span class="flow-arrow" aria-hidden="true">→</span>
-              <div class="flow-node">Email reply<small>Hot: personalised · Others: acknowledgement</small></div>
-              <span class="flow-arrow" aria-hidden="true">→</span>
-              <div class="flow-node">Google Sheets<small>Every lead logged</small></div>
-            </div>
+        <div class="scroll-hint" aria-hidden="true">
+          <span>SCROLL — FLY THROUGH THE PIPELINE</span>
+          <span class="scroll-arrow">↓</span>
+        </div>
+
+        <div class="flow-fallback" aria-label="Workflow overview">
+          <div class="flow">
+            <div class="flow-node">Lead form<small>The demo below</small></div>
+            <span class="flow-arrow" aria-hidden="true">→</span>
+            <div class="flow-node ai">AI qualification<small>Score + category</small></div>
+            <span class="flow-arrow" aria-hidden="true">→</span>
+            <div class="flow-node">Email reply<small>Hot: personalised · Others: acknowledgement</small></div>
+            <span class="flow-arrow" aria-hidden="true">→</span>
+            <div class="flow-node">Google Sheets<small>Every lead logged</small></div>
           </div>
         </div>
       </header>
@@ -621,75 +678,153 @@
       })();
     </script>
     <script>
-      /* Fallback: if the 3D scene cannot start (no WebGL, CDN blocked,
-         reduced motion, or a small phone screen), show the static flow. */
+      /* Fallback: if the 3D world cannot start (no WebGL, reduced
+         motion, or the module fails within 8s), hide the canvas and
+         show the static flow strip instead. */
       (function () {
-        var stage = document.getElementById("pipeline-stage");
         var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        if (reduceMotion) { stage.classList.add("no-webgl"); return; }
+        if (reduceMotion) { document.body.classList.add("no-webgl"); return; }
         window.__pipeline3dTimer = setTimeout(function () {
-          if (!window.__pipeline3dReady) { stage.classList.add("no-webgl"); }
+          if (!window.__pipeline3dReady) { document.body.classList.add("no-webgl"); }
         }, 8000);
       })();
     </script>
     <script type="module">
       import * as THREE from "three";
+      import { EffectComposer } from "./jsm/postprocessing/EffectComposer.js";
+      import { RenderPass } from "./jsm/postprocessing/RenderPass.js";
+      import { UnrealBloomPass } from "./jsm/postprocessing/UnrealBloomPass.js";
+      import { OutputPass } from "./jsm/postprocessing/OutputPass.js";
+      import { RoomEnvironment } from "./jsm/environments/RoomEnvironment.js";
       if (window.__pipeline3dTimer) { clearTimeout(window.__pipeline3dTimer); }
 
       (function () {
-        var stage = document.getElementById("pipeline-stage");
-        var viewport = document.getElementById("stage-viewport");
-        var canvas = document.getElementById("pipeline-canvas");
-        if (!stage || !viewport || !canvas) return;
+        var canvas = document.getElementById("bg-canvas");
+        if (!canvas) return;
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
         var renderer;
         try {
           renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
         } catch (e) {
-          stage.classList.add("no-webgl");
+          document.body.classList.add("no-webgl");
           return;
         }
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth < 640 ? 1.5 : 2));
+        /* Filmic tone mapping — the reference heroes get their glow
+           from real light, not from flat bright colours. */
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
 
+        /* Near-black world (21st.dev shader-hero style): one hero hue
+           (emerald) + one counter-light (magenta). Colour comes from
+           light hitting objects, not from gradients painted over
+           everything. Content stays in dark-glass panels. */
         var scene = new THREE.Scene();
-        var BG = 0x04120a;
+        var BG = 0x04050a;
         scene.background = new THREE.Color(BG);
-        scene.fog = new THREE.FogExp2(BG, 0.045);
+        scene.fog = new THREE.FogExp2(BG, 0.03);
+        /* Environment reflections, so the glass nodes read as real
+           lit objects instead of flat shapes. */
+        var pmrem = new THREE.PMREMGenerator(renderer);
+        scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
-        /* Everything that moves scales together on narrow screens, so the
-           whole pipeline stays in frame on a phone. The floor grid stays
-           full-size — it is the reference that gives the scene its scale. */
-        var world = new THREE.Group();
-        scene.add(world);
+        var camera = new THREE.PerspectiveCamera(45, 2, 0.1, 120);
+        camera.position.set(0, 0.8, 12);
 
-        var camera = new THREE.PerspectiveCamera(45, 2, 0.1, 100);
-        camera.position.set(0, 0.5, 10.5);
-
-        scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-        var keyLight = new THREE.PointLight(0x12a150, 60, 30);
-        keyLight.position.set(-1.4, 1.5, 3);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+        /* Strong emerald rim light from behind-right — the hero hue. */
+        var keyLight = new THREE.PointLight(0x2de08f, 100, 40);
+        keyLight.position.set(2, 3, 6);
         scene.add(keyLight);
-        var fillLight = new THREE.PointLight(0xffffff, 12, 30);
-        fillLight.position.set(5, -1, 4);
+        /* Weak magenta fill from the left — the counter-light, so
+           shapes have a warm side and a cool side. */
+        var fillLight = new THREE.PointLight(0xe14b8a, 35, 40);
+        fillLight.position.set(-6, -1, 8);
         scene.add(fillLight);
+        /* Emerald rim light from behind the pipeline, so the far nodes
+           glow against the dark instead of disappearing into it. */
+        var rimLight = new THREE.PointLight(0x2de08f, 40, 50);
+        rimLight.position.set(0, 2, -14);
+        scene.add(rimLight);
 
-        /* The pipeline: four nodes on a gentle curve. Scale is the cue —
-           the small lead dot grows into the big AI orb, then settles. */
+        /* Bloom — the single most important post effect: bright edges
+           and the travelling lead turn into real light. Skipped on
+           phones to keep it light (the additive halos still glow). */
+        var useBloom = window.innerWidth >= 640;
+        var composer = null;
+        if (useBloom) {
+          composer = new EffectComposer(renderer);
+          composer.addPass(new RenderPass(scene, camera));
+          composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.65, 0.6, 0.2));
+          composer.addPass(new OutputPass());
+        }
+
+        /* Animated shader backdrop — the "shader hero" from the reel:
+           slow domain-warped emerald light ribbons drifting over
+           near-black, with a hint of magenta. A big plane far behind
+           the pipeline, so the camera flies in front of it the whole way. */
+        var auroraUniforms = { uTime: { value: 0 } };
+        var aurora = new THREE.Mesh(
+          new THREE.PlaneGeometry(90, 50),
+          new THREE.ShaderMaterial({
+            uniforms: auroraUniforms,
+            depthWrite: false,
+            vertexShader: "varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+            fragmentShader: [
+              "varying vec2 vUv;",
+              "uniform float uTime;",
+              "float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }",
+              "float noise(vec2 p) {",
+              "  vec2 i = floor(p); vec2 f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);",
+              "  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);",
+              "}",
+              "float fbm(vec2 p) {",
+              "  float v = 0.0; float a = 0.5;",
+              "  for (int i = 0; i < 5; i++) { v += a * noise(p); p = p * 2.03 + vec2(17.3, 9.1); a *= 0.5; }",
+              "  return v;",
+              "}",
+              "void main() {",
+              "  vec2 p = (vUv - 0.5) * vec2(1.7, 1.0);",
+              "  float t = uTime * 0.03;",
+              "  vec2 q = vec2(fbm(p * 1.4 + vec2(t, -t * 0.6)), fbm(p * 1.4 + vec2(-t * 0.4, t)));",
+              "  vec2 r = vec2(fbm(p * 1.4 + 2.0 * q + vec2(1.7, 9.2) + 0.15 * t), fbm(p * 1.4 + 2.0 * q + vec2(8.3, 2.8) - 0.12 * t));",
+              "  float band = smoothstep(0.55, 0.95, fbm(p * 1.4 + 2.2 * r));",
+              "  float f = clamp(1.0 - length(p) * 0.9, 0.0, 1.0);",
+              "  vec3 col = vec3(0.016, 0.02, 0.04);",
+              "  col += vec3(0.10, 0.95, 0.55) * pow(band, 2.0) * f * 1.6;",
+              "  col += vec3(0.9, 0.15, 0.55) * pow(q.x, 5.0) * 0.35;",
+              "  col *= smoothstep(1.2, 0.2, length(p));",
+              "  gl_FragColor = vec4(col, 1.0);",
+              "}"
+            ].join("\n")
+          })
+        );
+        aurora.position.set(0, 0.5, -28);
+        aurora.renderOrder = -1;
+        scene.add(aurora);
+
+        /* The pipeline, stretched back into depth: the camera flies
+           along it as the page scrolls. Scale is the cue — the small
+           lead dot grows into the big AI orb, then settles. */
+        /* Glass nodes (MeshPhysicalMaterial + clearcoat + environment
+           reflections) — one hero hue (emerald), lit by the magenta
+           counter-light, so each orb has a warm side and a cool side.
+           Distinguished by size and by their labels, not by flat paint. */
         var nodeDefs = [
-          { id: "lead",  pos: [-4.7, 0.7, 0],    r: 0.34, color: 0xeafff1, emissive: 0x9fd8b4, ei: 0.5 },
-          { id: "ai",    pos: [-1.5, -0.55, 0.7], r: 0.95, color: 0x12a150, emissive: 0x12a150, ei: 1.0 },
-          { id: "email", pos: [1.7, 0.75, -0.4],  r: 0.52, color: 0x7be3a8, emissive: 0x12a150, ei: 0.7 },
-          { id: "sheet", pos: [4.7, -0.45, 0.2],  r: 0.52, color: 0xeafff1, emissive: 0x9fd8b4, ei: 0.5 }
+          { id: "lead",  pos: [-4.7, 0.7, 0],    r: 0.34, ei: 1.2 },
+          { id: "ai",    pos: [-0.5, -1.3, -4], r: 0.95, ei: 2.0 },
+          { id: "email", pos: [1.7, 0.75, -8],   r: 0.52, ei: 1.2 },
+          { id: "sheet", pos: [4.7, -0.45, -12], r: 0.52, ei: 1.2 }
         ];
         var nodes = {};
         nodeDefs.forEach(function (d) {
           var mesh = new THREE.Mesh(
             new THREE.SphereGeometry(d.r, 48, 32),
-            new THREE.MeshStandardMaterial({ color: d.color, emissive: d.emissive, emissiveIntensity: d.ei, roughness: 0.35, metalness: 0.1 })
+            new THREE.MeshPhysicalMaterial({ color: 0x0b1f16, metalness: 0.1, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.1, emissive: 0x2de08f, emissiveIntensity: d.ei })
           );
           mesh.position.set(d.pos[0], d.pos[1], d.pos[2]);
-          world.add(mesh);
+          scene.add(mesh);
           nodes[d.id] = mesh;
         });
 
@@ -699,39 +834,77 @@
           c.width = c.height = 128;
           var g = c.getContext("2d");
           var grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-          grad.addColorStop(0, "rgba(123,227,168,0.85)");
-          grad.addColorStop(0.35, "rgba(18,161,80,0.35)");
+          grad.addColorStop(0, "rgba(123,227,168,0.9)");
+          grad.addColorStop(0.35, "rgba(18,161,80,0.4)");
           grad.addColorStop(1, "rgba(18,161,80,0)");
           g.fillStyle = grad;
           g.fillRect(0, 0, 128, 128);
           return new THREE.CanvasTexture(c);
         }
-        var halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), transparent: true, depthWrite: false }));
-        halo.scale.set(4.6, 4.6, 1);
+        var halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+        halo.scale.set(3.0, 3.0, 1);
         halo.position.copy(nodes.ai.position);
-        world.add(halo);
+        scene.add(halo);
 
         /* Slow orbit ring around the AI node — the "95" score ring. */
         var ring = new THREE.Mesh(
           new THREE.TorusGeometry(1.35, 0.02, 12, 80),
-          new THREE.MeshBasicMaterial({ color: 0x7be3a8, transparent: true, opacity: 0.7 })
+          new THREE.MeshBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.9 })
         );
         ring.position.copy(nodes.ai.position);
         ring.rotation.x = Math.PI / 2.6;
-        world.add(ring);
+        scene.add(ring);
 
-        /* The path the leads travel. */
+        /* The path the leads travel — a gradient light trail: dim
+           emerald (lead) -> bright emerald (AI) -> magenta (Sheets).
+           Vertex colours along the tube. */
         var curve = new THREE.CatmullRomCurve3(
           nodeDefs.map(function (d) { return new THREE.Vector3(d.pos[0], d.pos[1], d.pos[2]); })
         );
+        var tubeGeo = new THREE.TubeGeometry(curve, 100, 0.045, 8, false);
+        var tubeStops = [
+          new THREE.Color(0x0e5c34), new THREE.Color(0x2de08f),
+          new THREE.Color(0x2de08f), new THREE.Color(0xe14b8a)
+        ];
+        var tubeUv = tubeGeo.attributes.uv;
+        var tubeColors = new Float32Array(tubeUv.count * 3);
+        var tmpColor = new THREE.Color();
+        for (var ti = 0; ti < tubeUv.count; ti++) {
+          var tt = tubeUv.getX(ti);
+          var seg = Math.min(2, Math.floor(tt * 3));
+          var frac = tt * 3 - seg;
+          tmpColor.copy(tubeStops[seg]).lerp(tubeStops[seg + 1], frac);
+          tubeColors[ti * 3] = tmpColor.r;
+          tubeColors[ti * 3 + 1] = tmpColor.g;
+          tubeColors[ti * 3 + 2] = tmpColor.b;
+        }
+        tubeGeo.setAttribute("color", new THREE.BufferAttribute(tubeColors, 3));
         var tube = new THREE.Mesh(
-          new THREE.TubeGeometry(curve, 80, 0.028, 8, false),
-          new THREE.MeshBasicMaterial({ color: 0x12a150, transparent: true, opacity: 0.4 })
+          tubeGeo,
+          new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending })
         );
-        world.add(tube);
+        scene.add(tube);
+
+        /* Round soft dots for the particles (a square point up close
+           looks like a green tile — a radial sprite reads as a glowing
+           lead). */
+        function dotTexture() {
+          var c = document.createElement("canvas");
+          c.width = c.height = 64;
+          var g = c.getContext("2d");
+          var grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+          grad.addColorStop(0, "rgba(255,255,255,1)");
+          grad.addColorStop(0.4, "rgba(255,255,255,0.9)");
+          grad.addColorStop(1, "rgba(255,255,255,0)");
+          g.fillStyle = grad;
+          g.fillRect(0, 0, 64, 64);
+          return new THREE.CanvasTexture(c);
+        }
+        var dotTex = dotTexture();
 
         /* Flowing leads: particles travelling along the path. Fewer on
-           phones, to keep it light. */
+           phones, to keep it light. Additive blending now — on the dark
+           scene the dots read as glowing light instead of flat paint. */
         var FLOW_COUNT = window.innerWidth < 640 ? 220 : 420;
         var flowGeo = new THREE.BufferGeometry();
         var flowPos = new Float32Array(FLOW_COUNT * 3);
@@ -740,36 +913,137 @@
           flowT.push({ t: Math.random(), speed: 0.05 + Math.random() * 0.11 });
         }
         flowGeo.setAttribute("position", new THREE.BufferAttribute(flowPos, 3));
+        /* Each flowing lead carries one of the palette colours:
+           mostly emerald, with magenta and white sparkles. */
+        var flowPalette = [
+          new THREE.Color(0x2de08f), new THREE.Color(0x6ee7b7),
+          new THREE.Color(0xe14b8a), new THREE.Color(0xffffff)
+        ];
+        var flowColors = new Float32Array(FLOW_COUNT * 3);
+        for (var ci = 0; ci < FLOW_COUNT; ci++) {
+          var c = flowPalette[ci % flowPalette.length];
+          flowColors[ci * 3] = c.r;
+          flowColors[ci * 3 + 1] = c.g;
+          flowColors[ci * 3 + 2] = c.b;
+        }
+        flowGeo.setAttribute("color", new THREE.BufferAttribute(flowColors, 3));
         var flow = new THREE.Points(flowGeo, new THREE.PointsMaterial({
-          color: 0x7be3a8, size: 0.085, transparent: true, opacity: 0.95,
-          blending: THREE.AdditiveBlending, depthWrite: false
+          vertexColors: true, size: 0.14, map: dotTex, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending
         }));
-        world.add(flow);
+        scene.add(flow);
 
-        /* Faint dust for depth. */
-        var DUST = 220;
+        /* Far starfield for depth — 800 tiny points, so the far layer
+           reads as a real sky, not a few stray dots. */
+        var DUST = 800;
         var dustGeo = new THREE.BufferGeometry();
         var dustPos = new Float32Array(DUST * 3);
         for (var j = 0; j < DUST; j++) {
-          dustPos[j * 3] = (Math.random() - 0.5) * 16;
-          dustPos[j * 3 + 1] = (Math.random() - 0.5) * 6;
-          dustPos[j * 3 + 2] = (Math.random() - 0.5) * 5 - 1;
+          dustPos[j * 3] = (Math.random() - 0.5) * 26;
+          dustPos[j * 3 + 1] = (Math.random() - 0.5) * 9;
+          dustPos[j * 3 + 2] = (Math.random() - 0.5) * 14 - 6;
         }
         dustGeo.setAttribute("position", new THREE.BufferAttribute(dustPos, 3));
-        world.add(new THREE.Points(dustGeo, new THREE.PointsMaterial({
-          color: 0x9fd8b4, size: 0.05, transparent: true, opacity: 0.4, depthWrite: false
+        scene.add(new THREE.Points(dustGeo, new THREE.PointsMaterial({
+          color: 0xffffff, size: 0.05, map: dotTex, transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending
         })));
 
         /* A faint floor grid — the reference object that gives the
            scene its sense of scale. */
-        var grid = new THREE.GridHelper(16, 16, 0x0a7d34, 0x0a3d1e);
+        var grid = new THREE.GridHelper(32, 32, 0x2de08f, 0x2de08f);
         grid.position.y = -2.4;
         grid.material.transparent = true;
-        grid.material.opacity = 0.28;
+        grid.material.opacity = 0.05;
         scene.add(grid);
 
-        /* HTML labels track the nodes. Positions are clamped inside the
-           viewport so a label never slides off-screen on a phone. */
+        /* White-hot core inside the AI orb — the glowing heart of the
+           scene. */
+        var aiCore = new THREE.Mesh(
+          new THREE.SphereGeometry(0.42, 32, 24),
+          new THREE.MeshBasicMaterial({ color: 0xd1fae5 })
+        );
+        aiCore.position.copy(nodes.ai.position);
+        scene.add(aiCore);
+
+        /* Floating glass cards in the deep background — layered depth,
+           like the fan of cards on the 21st.dev homepage in the reel.
+           Dark glass with clearcoat, lit emerald or magenta. */
+        var cardGeo = new THREE.BoxGeometry(1.7, 1.05, 0.04);
+        var cardSpots = [
+          [-7.5, 1.6, -11, 0.35, 0x2de08f], [-6.5, -1.2, -14, -0.3, 0xe14b8a], [6.8, 1.9, -12, -0.35, 0x2de08f],
+          [7.6, -1.0, -16, 0.3, 0xe14b8a], [-8.2, 0.2, -18, 0.15, 0x2de08f], [8.4, 0.6, -19, -0.15, 0x2de08f]
+        ];
+        cardSpots.forEach(function (s) {
+          var card = new THREE.Mesh(cardGeo, new THREE.MeshPhysicalMaterial({
+            color: 0x0a0f1e, emissive: s[4], emissiveIntensity: 0.35,
+            roughness: 0.1, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.1, transparent: true, opacity: 0.55
+          }));
+          card.position.set(s[0], s[1], s[2]);
+          card.rotation.y = s[3];
+          card.rotation.z = s[3] * 0.4;
+          scene.add(card);
+        });
+
+        /* Near-field bokeh — 4 oversized soft shapes at the screen
+           edges, partly cropped, low opacity: the out-of-focus
+           foreground layer that fakes depth of field. They drift
+           slowly, so the scene never feels frozen. */
+        function bokehTexture(rgb) {
+          var c = document.createElement("canvas");
+          c.width = c.height = 128;
+          var g = c.getContext("2d");
+          var grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+          grad.addColorStop(0, "rgba(" + rgb + ",0.55)");
+          grad.addColorStop(0.5, "rgba(" + rgb + ",0.18)");
+          grad.addColorStop(1, "rgba(" + rgb + ",0)");
+          g.fillStyle = grad;
+          g.fillRect(0, 0, 128, 128);
+          return new THREE.CanvasTexture(c);
+        }
+        var bokehTexE = bokehTexture("45,224,143");
+        var bokehTexM = bokehTexture("225,75,138");
+        var bokehSpots = [
+          [-9, 2.5, 6, 9, 0.05, bokehTexE], [9, -1, 4, 11, 0.04, bokehTexM],
+          [-8, -2.5, 2, 8, 0.045, bokehTexE], [8, 3, 8, 10, 0.035, bokehTexM]
+        ];
+        var bokehSprites = [];
+        bokehSpots.forEach(function (s) {
+          var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: s[5], transparent: true, opacity: s[4], depthWrite: false, blending: THREE.AdditiveBlending }));
+          sp.scale.set(s[3], s[3], 1);
+          sp.position.set(s[0], s[1], s[2]);
+          sp.userData.baseY = s[1];
+          scene.add(sp);
+          bokehSprites.push(sp);
+        });
+
+        /* Camera flight path: a wide establishing view, then in along
+           the pipeline as the page scrolls — alongside the nodes, never
+           through them, so no orb ever fills the frame. */
+        var camCurve = null;
+        var zBack = 1;
+        function buildCamCurve() {
+          var pts = [
+            new THREE.Vector3(0, 0.8, 12),
+            new THREE.Vector3(-2, 1.0, 7),
+            new THREE.Vector3(-0.5, 0.8, 2),
+            new THREE.Vector3(1.5, 0.8, -3),
+            new THREE.Vector3(3, 0.8, -7)
+          ];
+          camCurve = new THREE.CatmullRomCurve3(pts);
+        }
+        /* Where the camera looks: starts on the centre of the pipeline
+           (the establishing shot), then follows the nodes one by one. */
+        var lookCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(0, 0, -6),
+          new THREE.Vector3(-0.5, -1.3, -4),
+          new THREE.Vector3(1.7, 0.75, -8),
+          new THREE.Vector3(4.7, -0.45, -12)
+        ]);
+        buildCamCurve();
+
+        /* HTML labels track the nodes, and fade out when their node
+           leaves the frame as the camera flies past. They also stay
+           hidden at the very top of the page, so the hero headline
+           sits over a clean 3D backdrop instead of label pills. */
         var labelEls = {};
         document.querySelectorAll(".node-label").forEach(function (el) {
           labelEls[el.getAttribute("data-node")] = el;
@@ -781,15 +1055,18 @@
         }
         var v3 = new THREE.Vector3();
         function placeLabels() {
-          var w = viewport.clientWidth, h = viewport.clientHeight;
+          var w = window.innerWidth, h = window.innerHeight;
+          /* Labels fade in once the flight has started (scrollT past ~0.03,
+             fully in by ~0.15), so the hero stays clean. */
+          var fade = Math.max(0, Math.min(1, (smoothT - 0.03) / 0.12));
           Object.keys(labelEls).forEach(function (id) {
             var el = labelEls[id];
             var node = nodes[id];
             if (!node) return;
             node.getWorldPosition(v3);
             v3.project(camera);
-            if (v3.z > 1) { el.style.opacity = "0"; return; }
-            el.style.opacity = "1";
+            if (v3.z > 1 || Math.abs(v3.x) > 1.05 || Math.abs(v3.y) > 1.05) { el.style.opacity = "0"; return; }
+            el.style.opacity = fade.toFixed(2);
             var x = (v3.x * 0.5 + 0.5) * w;
             var y = (-v3.y * 0.5 + 0.5) * h;
             /* On narrow screens the four labels would pile up in one band,
@@ -808,45 +1085,79 @@
           });
         }
 
-        /* Parallax: the camera follows the cursor, gently. */
+        /* Parallax: the camera follows the cursor, gently. The canvas
+           sits behind the content, so listen on the whole window. */
         var pointer = { x: 0, y: 0 };
-        stage.addEventListener("pointermove", function (e) {
-          var r = viewport.getBoundingClientRect();
-          pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
-          pointer.y = -(((e.clientY - r.top) / r.height) * 2 - 1);
+        window.addEventListener("pointermove", function (e) {
+          pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+          pointer.y = -((e.clientY / window.innerHeight) * 2 - 1);
         });
-        stage.addEventListener("pointerleave", function () { pointer.x = 0; pointer.y = 0; });
+
+        /* Scroll progress drives the flight: 0 = top of the page,
+           1 = bottom. Smoothed in the render loop. */
+        var targetT = 0, smoothT = 0;
+        var camOverride = null;
+        function readScroll() {
+          if (camOverride !== null) { targetT = camOverride; return; }
+          var max = document.documentElement.scrollHeight - window.innerHeight;
+          targetT = max > 0 ? Math.max(0, Math.min(1, window.scrollY / max)) : 0;
+        }
+        window.addEventListener("scroll", readScroll, { passive: true });
+        readScroll();
 
         function resize() {
-          var w = viewport.clientWidth, h = viewport.clientHeight;
-          if (!w || !h) return;
+          var w = window.innerWidth, h = window.innerHeight;
           renderer.setSize(w, h, false);
+          if (composer) composer.setSize(w, h);
           camera.aspect = w / h;
           camera.updateProjectionMatrix();
-          /* Narrow screens: shrink the whole pipeline so every node stays
-             in frame instead of the outer ones being cut off. */
-          var s = camera.aspect < 1 ? Math.max(0.55, camera.aspect * 0.8) : 1;
-          world.scale.setScalar(s);
+          /* Narrow screens sit further back at the start of the flight
+             (so the wide shot still fits every node); the extra distance
+             fades to zero by the end of the flight. */
+          zBack = camera.aspect < 1 ? 1.4 : 1;
+          buildCamCurve();
+          readScroll();
         }
         window.addEventListener("resize", resize);
         resize();
 
-        var running = true;
-        var visible = true;
-        if ("IntersectionObserver" in window) {
-          new IntersectionObserver(function (entries) {
-            visible = entries[0].isIntersecting;
-          }, { threshold: 0.02 }).observe(stage);
+        /* Preview hooks: ?scroll=0..1 jumps to that scroll position,
+           ?cam=0..1 pins the camera flight to that point (used for
+           screenshots — this headless browser cannot capture a scrolled
+           page, so ?cam= verifies the flight without scrolling).
+           Both are absent in normal use. */
+        var scrollParam = new URLSearchParams(window.location.search).get("scroll");
+        if (scrollParam !== null) {
+          var sv = parseFloat(scrollParam);
+          if (!isNaN(sv)) {
+            document.documentElement.style.scrollBehavior = "auto";
+            var max0 = document.documentElement.scrollHeight - window.innerHeight;
+            window.scrollTo(0, Math.max(0, Math.min(1, sv)) * max0);
+            readScroll();
+            smoothT = targetT;
+          }
         }
+        var camParam = new URLSearchParams(window.location.search).get("cam");
+        if (camParam !== null) {
+          var cv = parseFloat(camParam);
+          if (!isNaN(cv)) {
+            camOverride = Math.max(0, Math.min(1, cv));
+            targetT = camOverride;
+            smoothT = camOverride;
+          }
+        }
+
+        var running = true;
         document.addEventListener("visibilitychange", function () {
           running = !document.hidden;
         });
 
         var clock = new THREE.Clock();
         var tmp = new THREE.Vector3();
+        var lookTmp = new THREE.Vector3();
         function tick() {
           requestAnimationFrame(tick);
-          if (!running || !visible) return;
+          if (!running) return;
           var dt = Math.min(clock.getDelta(), 0.05);
           var t = clock.elapsedTime;
 
@@ -863,15 +1174,35 @@
 
           var pulse = 1 + Math.sin(t * 2.2) * 0.06;
           nodes.ai.scale.setScalar(pulse);
-          halo.material.opacity = 0.75 + Math.sin(t * 2.2) * 0.2;
+          aiCore.scale.setScalar(pulse);
+          halo.material.opacity = 0.45 + Math.sin(t * 2.2) * 0.12;
           ring.rotation.z = t * 0.35;
+          auroraUniforms.uTime.value = t;
+          /* Slow bokeh drift — the foreground layer never sits still. */
+          for (var bi = 0; bi < bokehSprites.length; bi++) {
+            bokehSprites[bi].position.y = bokehSprites[bi].userData.baseY + Math.sin(t * 0.25 + bi * 1.7) * 0.5;
+          }
 
-          camera.position.x += (pointer.x * 0.7 - camera.position.x) * 0.04;
-          camera.position.y += (0.5 + pointer.y * 0.35 - camera.position.y) * 0.04;
-          camera.lookAt(0, 0, 0);
+          /* Smooth flight along the path, with gentle pointer parallax.
+             The extra pull-back on narrow screens applies mostly at the
+             start of the flight and fades to zero by the end. */
+          smoothT += (targetT - smoothT) * 0.07;
+          var s = Math.max(0, Math.min(1, smoothT));
+          var camPos = camCurve.getPointAt(s);
+          camera.position.set(
+            camPos.x + pointer.x * 0.5,
+            camPos.y + pointer.y * 0.3,
+            camPos.z + (1 - s) * (zBack - 1) * 12
+          );
+          lookTmp.copy(lookCurve.getPointAt(s));
+          /* Composition: look slightly left of the pipeline, so the
+             focal subject sits right of centre (~65% x) and the left
+             third stays quiet for the headline. */
+          lookTmp.x -= 2.0;
+          camera.lookAt(lookTmp);
 
           placeLabels();
-          renderer.render(scene, camera);
+          if (composer) { composer.render(); } else { renderer.render(scene, camera); }
         }
         tick();
         window.__pipeline3dReady = true;
